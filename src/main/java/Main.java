@@ -58,7 +58,7 @@ public class Main {
             while ((line = br.readLine()) != null) {
                 if (line.matches(IMAGE_REGEX)) {
                     String[] split = line.split("]");
-                    ImageInfo imageInfo = getReplaceFormatStr(split[0], file);
+                    ImageInfo imageInfo = getImageInfoFromMD(split[0], file);
                     String url = getDownloadURL(split[1]);
                     mMap.put(UrlUtils.hashKeyFromUrl(url), imageInfo);
 
@@ -82,7 +82,10 @@ public class Main {
 
     }
 
-    public static ImageInfo getReplaceFormatStr(String str, File file) {
+    /**
+     * 从md 图片链接格式中，构建imageInfo信息
+     */
+    public static ImageInfo getImageInfoFromMD(String str, File file) {
         ImageInfo imageInfo;
         if (str != null && !str.isEmpty()) {
             int first = str.indexOf('[') + 1;
@@ -96,7 +99,7 @@ public class Main {
     }
 
     /**
-     * 获取下载信息
+     * 获取下载url
      */
     public static String getDownloadURL(String str) {
         if (str != null && !str.isEmpty()) {
