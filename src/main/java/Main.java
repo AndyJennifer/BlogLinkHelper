@@ -3,14 +3,11 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
-import java.net.URL;
-import java.net.URLConnection;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Set;
 
 /**
  * Author:  andy.xwt
@@ -19,14 +16,19 @@ import java.util.concurrent.Executors;
  */
 
 public class Main {
-    static final String BASE_PATH = "/Users/xuwentao/Documents/GitHub/AndyJennifer.github.io/source/_posts";
-    static final String IMAGE_REGEX = "^!\\[(.*)\\]\\((.*)\\)$";
-    static final String FORMAT = "{%% asset_img %1$s %2$s %%}";
-    private static ExecutorService executorService = Executors.newFixedThreadPool(4);
+
+    //定义的博客地址，与你自己hexo发布的博客路径有关
+    private static final String BASE_PATH = "/Users/xuwentao/Documents/GitHub/AndyJennifer.github.io/source/_posts";
+    private static final String IMAGE_REGEX = "^!\\[(.*)\\]\\((.*)\\)$";
+    private static final String FORMAT = "{%% asset_img %1$s %2$s %%}";
+
+    private static HashMap<String, ImageInfo> mMap = new LinkedHashMap<>();
 
     public static void main(String[] args) {
         System.out.println("替换博客开始(≧▽≦)啦啦啦！！！！！");
         readFile();
+        doDownload();
+        System.out.println("好了~~结束啦");
     }
 
 
@@ -34,9 +36,11 @@ public class Main {
         File dir = new File(BASE_PATH);
         File[] files = dir.listFiles();
         for (File file : files) {
-            if (!file.isDirectory() && file.getName().contains("md")) {
-                System.out.println("开始解析要修改的博客---->" + file.getName());
+            String fileName = file.getName();
+            if (!file.isDirectory() && fileName.contains("md")) {
+                System.out.println("开始替换博客--->" + fileName + "中的图片链接");
                 modifyFileContent(file);
+                System.out.println(fileName + "--->博客链接已经替换完毕");
             }
         }
 
@@ -54,11 +58,12 @@ public class Main {
             while ((line = br.readLine()) != null) {
                 if (line.matches(IMAGE_REGEX)) {
                     String[] split = line.split("]");
-                    String[] imageInfo = getReplaceFormatStr(split[0]);
-                    String downloadURL = getDownloadURL(split[1]);
-                    bw.write(String.format(FORMAT, imageInfo[0], imageInfo[1]));
-                    //开始执行下载任务
-                    executorService.execute(new downLoadTask(downloadURL, imageInfo[0], removeFileSuffix(file)));
+                    ImageInfo imageInfo = getReplaceFormatStr(split[0], file);
+                    String url = getDownloadURL(split[1]);
+                    mMap.put(UrlUtils.hashKeyFromUrl(url), imageInfo);
+
+                    //替换文本中出现的md格式的图片连接
+                    bw.write(String.format(FORMAT, imageInfo.getImageFullName(), imageInfo.getImageDesc()));
                 } else {
                     bw.write(line);
                 }
@@ -77,16 +82,15 @@ public class Main {
 
     }
 
-    public static String[] getReplaceFormatStr(String str) {
+    public static ImageInfo getReplaceFormatStr(String str, File file) {
+        ImageInfo imageInfo;
         if (str != null && !str.isEmpty()) {
             int first = str.indexOf('[') + 1;
             int pointIndex = str.indexOf('.');
             String imageFullName = str.substring(first);
             String imageDesc = str.substring(first, pointIndex);
-            String[] data = new String[2];
-            data[0] = imageFullName;
-            data[1] = imageDesc;
-            return data;
+            imageInfo = new ImageInfo(imageFullName, imageDesc, removeFileSuffix(file));
+            return imageInfo;
         }
         return null;
     }
@@ -112,50 +116,22 @@ public class Main {
         return split[0];
     }
 
-    private static class downLoadTask implements Runnable {
-
-        private String urlString;
-        private String filename;
-        private String savePath;
-
-        public downLoadTask(String urlString, String filename, String savePath) {
-            this.urlString = urlString;
-            this.filename = filename;
-            this.savePath = savePath;
-        }
-
-        @Override
-        public void run() {
-            System.out.println("开始下载......" + filename);
-            download(urlString, filename, savePath);
-            System.out.println("下载结束......" + filename);
-        }
-
-        static void download(String urlString, String filename, String savePath) {
-            try {
-                URL url = new URL(urlString);
-
-                URLConnection con = url.openConnection();
-                con.setConnectTimeout(5 * 1000);
-                InputStream is = con.getInputStream();
-
-                byte[] bs = new byte[1024];
-                int len;
-                File sf = new File(BASE_PATH, savePath);
-                if (!sf.exists()) {
-                    sf.mkdirs();
+    /**
+     * 依次执行下载任务
+     */
+    public static void doDownload() {
+        Set<String> keySet = mMap.keySet();
+        for (String url : keySet) {
+            ImageInfo imageInfo = mMap.get(keySet);
+            DownloadTask downloadTask = new DownloadTask() {
+                @Override
+                protected void onPreExecute() {
+                    System.out.println();
                 }
-                OutputStream os = new FileOutputStream(new File(sf, filename));
-                // 开始读取
-                while ((len = is.read(bs)) != -1) {
-                    os.write(bs, 0, len);
-                }
-                os.close();
-                is.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            };
+            downloadTask.execute(url, imageInfo.getImageFullName(), BASE_PATH + File.separator + imageInfo.getBelongBlog());
         }
     }
+
 
 }
