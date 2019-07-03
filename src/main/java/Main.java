@@ -18,7 +18,7 @@ import java.util.Set;
 public class Main {
 
     //定义的博客地址，与你自己hexo发布的博客路径有关
-    private static final String BASE_PATH = "/Users/xuwentao/Documents/GitHub/AndyJennifer.github.io/source/_posts";
+    private static final String BASE_PATH = "/Users/xuwentao/Documents/test";
     private static final String IMAGE_REGEX = "^!\\[(.*)\\]\\((.*)\\)$";
     private static final String FORMAT = "{%% asset_img %1$s %2$s %%}";
 
@@ -37,7 +37,7 @@ public class Main {
         File[] files = dir.listFiles();
         for (File file : files) {
             String fileName = file.getName();
-            if (!file.isDirectory() && fileName.contains("md")) {
+            if (!file.isDirectory() && fileName.end("md")) {
                 System.out.println("开始替换博客--->" + fileName + "中的图片链接");
                 modifyFileContent(file);
                 System.out.println(fileName + "--->博客链接已经替换完毕");
@@ -61,7 +61,6 @@ public class Main {
                     ImageInfo imageInfo = getImageInfoFromMD(split[0], file);
                     String url = getDownloadURL(split[1]);
                     mMap.put(UrlUtils.hashKeyFromUrl(url), imageInfo);
-
                     //替换文本中出现的md格式的图片连接
                     bw.write(String.format(FORMAT, imageInfo.getImageFullName(), imageInfo.getImageDesc()));
                 } else {
@@ -131,6 +130,7 @@ public class Main {
                 protected void onPreExecute() {
                     System.out.println();
                 }
+
             };
             downloadTask.execute(url, imageInfo.getImageFullName(), BASE_PATH + File.separator + imageInfo.getBelongBlog());
         }

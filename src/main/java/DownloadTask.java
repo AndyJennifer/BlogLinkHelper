@@ -108,6 +108,13 @@ public class DownloadTask {
     }
 
     /**
+     * 当任务执行完毕
+     */
+    protected void onPostExecute() {
+
+    }
+
+    /**
      * 构建工作任务
      */
     private class WorkRunnable implements Runnable {
@@ -144,6 +151,7 @@ public class DownloadTask {
                 }
                 os.close();
                 is.close();
+                onPostExecute();
             } catch (Exception e) {
                 e.printStackTrace();
             }
