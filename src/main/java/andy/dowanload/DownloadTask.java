@@ -1,5 +1,8 @@
+package andy.dowanload;
+
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
@@ -21,17 +24,38 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class DownloadTask {
 
-    private static final String LOG_TAG = "DownloadTask";
 
+    private WorkRunnable mWorkRunnable;
 
-    private static final ThreadFactory sThreadFactory = new ThreadFactory() {
-        private final AtomicInteger mCont = new AtomicInteger(1);
+    /**
+     * 线程工厂类，用户设置线程的名称
+     */
+    static class DefaultThreadFactory implements ThreadFactory {
+        private static final AtomicInteger poolNumber = new AtomicInteger(1);
+        private final ThreadGroup group;
+        private final AtomicInteger threadNumber = new AtomicInteger(1);
+        private final String namePrefix;
 
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread("DowanloadTask #" + mCont.getAndIncrement());
+        DefaultThreadFactory() {
+            SecurityManager s = System.getSecurityManager();
+            group = (s != null) ? s.getThreadGroup() :
+                    Thread.currentThread().getThreadGroup();
+            namePrefix = "DownloadTask-" +
+                    poolNumber.getAndIncrement() +
+                    "-thread-";
         }
-    };
+
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(group, r,
+                    namePrefix + threadNumber.getAndIncrement(),
+                    0);
+            if (t.isDaemon())
+                t.setDaemon(false);
+            if (t.getPriority() != Thread.NORM_PRIORITY)
+                t.setPriority(Thread.NORM_PRIORITY);
+            return t;
+        }
+    }
 
     private static BlockingQueue<Runnable> sPoolWorkQueue = new LinkedBlockingDeque<>(128);
 
@@ -43,17 +67,17 @@ public class DownloadTask {
     private static final int MAXIMUM_POOL_SIZE = CPU_COUNT * 2 + 1;
     private static final int KEEP_ALIVE_SECONDS = 30;
 
-    public static final Executor THREAD_POOL_EXECUTOR;
+    private static final Executor THREAD_POOL_EXECUTOR;
 
     static {
         ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
                 CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE_SECONDS, TimeUnit.SECONDS,
-                sPoolWorkQueue, sThreadFactory);
+                sPoolWorkQueue, new DefaultThreadFactory());
         threadPoolExecutor.allowCoreThreadTimeOut(true);
         THREAD_POOL_EXECUTOR = threadPoolExecutor;
     }
 
-    public static final Executor SERIAL_EXECUTOR = new SerialExecutor();
+    private static final Executor SERIAL_EXECUTOR = new SerialExecutor();
     private static volatile Executor sDefaultExecutor = SERIAL_EXECUTOR;
 
     /**
@@ -64,7 +88,9 @@ public class DownloadTask {
         Runnable mActive;
 
         public synchronized void execute(final Runnable r) {
+
             mTasks.offer(new Runnable() {
+                @Override
                 public void run() {
                     try {
                         r.run();
@@ -73,12 +99,13 @@ public class DownloadTask {
                     }
                 }
             });
+
             if (mActive == null) {
                 scheduleNext();
             }
         }
 
-        protected synchronized void scheduleNext() {
+        private synchronized void scheduleNext() {
             if ((mActive = mTasks.poll()) != null) {
                 THREAD_POOL_EXECUTOR.execute(mActive);
             }
@@ -86,18 +113,17 @@ public class DownloadTask {
     }
 
 
-    public DownloadTask() {
-
-
+    public DownloadTask(String urlStr, String fileName, String savePath) {
+        mWorkRunnable = new WorkRunnable(urlStr, fileName, savePath);
     }
 
-    public void execute(String url, String dirName, String savePath) {
-        executeOnExecutor(sDefaultExecutor, url, dirName, savePath);
+    public void execute() {
+        executeOnExecutor(sDefaultExecutor);
     }
 
-    public void executeOnExecutor(Executor executor, String url, String fileName, String savePath) {
+    private void executeOnExecutor(Executor executor) {
         onPreExecute();
-        executor.execute(new WorkRunnable(url, fileName, savePath));
+        executor.execute(mWorkRunnable);
     }
 
     /**
@@ -152,11 +178,13 @@ public class DownloadTask {
                 os.close();
                 is.close();
                 onPostExecute();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 e.printStackTrace();
             }
-
         }
+
+
     }
+
 
 }
