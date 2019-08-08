@@ -9,16 +9,16 @@ import java.security.NoSuchAlgorithmException;
 
 public class UrlUtils {
 
-    public static String hashKeyFromUrl(String url) {
+    public static String hashKeyFromFileName(String fileName) {
         String cacheKey;
         try {
             MessageDigest digest = MessageDigest.getInstance("MD5");
-            digest.update(url.getBytes());
+            digest.update(fileName.getBytes());
             cacheKey = bytesToHexString(digest.digest());
 
         } catch (NoSuchAlgorithmException e) {
             e.printStackTrace();
-            cacheKey = String.valueOf(url.hashCode());
+            cacheKey = String.valueOf(fileName.hashCode());
         }
         return cacheKey;
 

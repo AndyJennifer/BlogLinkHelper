@@ -155,6 +155,9 @@ public class DownloadTask {
             this.savePath = savePath;
         }
 
+        /**
+         * 下载图片，并将图片放入与文章名称相同的文件夹中
+         */
         @Override
         public void run() {
             try {

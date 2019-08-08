@@ -1,5 +1,7 @@
 package andy.entity;
 
+import java.util.Objects;
+
 /**
  * Author:  andy.xwt
  * Date:    2019-07-02 23:50
@@ -10,14 +12,14 @@ public class ImageInfo {
 
     private String imageFullName;//图片全称 如xx.png xx.jpg xx.gif
     private String imageDesc;//图片描述
-    private String belongBlogName;//所属博客名称
+    private String belongFile;//所属文章名称
     private String url;//图片下载地址
 
 
-    public ImageInfo(String imageFullName, String imageDesc, String belongBlogName, String url) {
+    public ImageInfo(String imageFullName, String imageDesc, String belongFile, String url) {
         this.imageFullName = imageFullName;
         this.imageDesc = imageDesc;
-        this.belongBlogName = belongBlogName;
+        this.belongFile = belongFile;
         this.url = url;
     }
 
@@ -37,12 +39,12 @@ public class ImageInfo {
         this.imageDesc = imageDesc;
     }
 
-    public String getBelongBlogName() {
-        return belongBlogName;
+    public String getBelongFile() {
+        return belongFile;
     }
 
-    public void setBelongBlogName(String belongBlogName) {
-        this.belongBlogName = belongBlogName;
+    public void setBelongFile(String belongFile) {
+        this.belongFile = belongFile;
     }
 
     public String getUrl() {
@@ -51,5 +53,19 @@ public class ImageInfo {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ImageInfo imageInfo = (ImageInfo) o;
+        return Objects.equals(belongFile, imageInfo.belongFile) &&
+                Objects.equals(url, imageInfo.url);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(belongFile, url);
     }
 }
