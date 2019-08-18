@@ -88,12 +88,16 @@ public class Main {
 
     /**
      * 获取原有图片中的url
+     *
+     * @param str 解析格式为!(xxx.png)
+     * @return 返回格式为xxx.png
      */
     public static String getDownloadURL(String str) {
         if (str != null && !str.isEmpty()) {
             int first = str.indexOf('(') + 1;
             int pointIndex = str.indexOf(')');
-            return str.substring(first, pointIndex);
+            if (first > 0 && pointIndex > 0)
+                return str.substring(first, pointIndex);
 
         }
         return null;
@@ -112,10 +116,12 @@ public class Main {
         if (mdLink != null && !mdLink.isEmpty()) {
             int first = mdLink.indexOf('[') + 1;
             int pointIndex = mdLink.indexOf('.');
-            String imageFullName = mdLink.substring(first);
-            String imageDesc = mdLink.substring(first, pointIndex);
-            imageInfo = new ImageInfo(imageFullName, imageDesc, belongBlogName, url);
-            return imageInfo;
+            if (first > 0 && pointIndex > 0) {
+                String imageFullName = mdLink.substring(first);
+                String imageDesc = mdLink.substring(first, pointIndex);
+                imageInfo = new ImageInfo(imageFullName, imageDesc, belongBlogName, url);
+                return imageInfo;
+            }
         }
         return null;
     }
