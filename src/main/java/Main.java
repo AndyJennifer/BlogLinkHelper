@@ -68,11 +68,13 @@ public class Main {
             while ((line = br.readLine()) != null) {
                 if (line.matches(IMAGE_REGEX)) {//通过正则，获取图片url
                     String[] split = line.split("]");
-                    //获取原有文章中图片的url
-                    String url = getDownloadURL(split[1]);
-                    //构造图片信息对象
-                    ImageInfo imageInfo = getImageInfoFromMD(split[0], removeFileSuffix(file), url);
-                    fileInfo.addImageInfo(imageInfo);
+                    if (split.length > 0) {
+                        //获取原有文章中图片的url
+                        String url = getDownloadURL(split[1]);
+                        //构造图片信息对象
+                        ImageInfo imageInfo = getImageInfoFromMD(split[0], removeFileSuffix(file), url);
+                        fileInfo.addImageInfo(imageInfo);
+                    }
 
                 }
             }
@@ -89,8 +91,8 @@ public class Main {
     /**
      * 获取原有图片中的url
      *
-     * @param str 解析格式为!(xxx.png)
-     * @return 返回格式为xxx.png
+     * @param str 字符串内容：(http://ABC/ABD/xxx.png)
+     * @return 返回图片下载地址
      */
     public static String getDownloadURL(String str) {
         if (str != null && !str.isEmpty()) {
@@ -107,23 +109,28 @@ public class Main {
     /**
      * 从md 图片链接格式中，构建imageInfo信息
      *
-     * @param mdLink         [xx.jpg]或[xx.png]或[xx.gif]
+     * @param mdLink         第一种格式：[xx.jpg或[xx.png或[xx.gif  第二种格式：[xxx
      * @param belongBlogName 所属博客名称
      * @return imageInfo信息
      */
     public static ImageInfo getImageInfoFromMD(String mdLink, String belongBlogName, String url) {
-        ImageInfo imageInfo;
+        ImageInfo imageInfo = null;
         if (mdLink != null && !mdLink.isEmpty()) {
             int first = mdLink.indexOf('[') + 1;
-            int pointIndex = mdLink.indexOf('.');
-            if (first > 0 && pointIndex > 0) {
-                String imageFullName = mdLink.substring(first);
-                String imageDesc = mdLink.substring(first, pointIndex);
-                imageInfo = new ImageInfo(imageFullName, imageDesc, belongBlogName, url);
-                return imageInfo;
+            String imageFullName;
+            String imageDesc;
+            //第一种格式 [xx.jpg或[xx.png或[xx.gif
+            if (mdLink.contains(".")) {
+                int pointIndex = mdLink.indexOf('.');
+                imageFullName = mdLink.substring(first);
+                imageDesc = mdLink.substring(first, pointIndex);
+            } else {//第二种格式：[xxx
+                imageFullName = mdLink.substring(first) + ".png";//默认将图片设置为png格式
+                imageDesc = mdLink.substring(first);
             }
+            imageInfo = new ImageInfo(imageFullName, imageDesc, belongBlogName, url);
         }
-        return null;
+        return imageInfo;
     }
 
     public static void modifyBlog() {
